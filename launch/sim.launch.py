@@ -15,22 +15,27 @@ def generate_launch_description():
     # include state publisher, which also launches URDF
     rsp = IncludeLaunchDescription(
                 PythonLaunchDescriptionSource([os.path.join(
-                    get_package_share_directory('otomo_control'),'launch','rsp.launch.py'
+                    get_package_share_directory('otomo_control'), 'launch', 'rsp.launch.py'
                 )]), launch_arguments={'use_sim_time': 'true', 'use_ros2_control': 'true'}.items()
     )
 
     joystick = IncludeLaunchDescription(
                 PythonLaunchDescriptionSource([os.path.join(
-                    get_package_share_directory('otomo_core'),'launch','joystick.launch.py'
+                    get_package_share_directory('otomo_core'), 'launch', 'joystick.launch.py'
                 )]), launch_arguments={'use_sim_time': 'true'}.items()
     )
 
-    # twist_mux_params = os.path.join(pkg_share_dir,'config','twist_mux.yaml')
+    twist_mux = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            os.path.join(get_package_share_directory('otomo_control'), 'launch', 'twist_mux.launch.py')
+        ]), launch_arguments={'use_sim_time': 'true'}
+    )
+
     # twist_mux = Node(
     #         package='twist_mux',
     #         executable='twist_mux',
     #         parameters=[twist_mux_params, {'use_sim_time': True}],
-    #         remappings=[('/cmd_vel_out','/diff_cont/cmd_vel_unstamped')]
+    #         remappings=[('/cmd_vel_out', '/diff_cont/cmd_vel_unstamped')]
     #     )
 
     gazebo_models_path = os.path.join(pkg_share_dir, 'worlds', 'models')
@@ -55,7 +60,7 @@ def generate_launch_description():
 
     controllers = IncludeLaunchDescription(
                 PythonLaunchDescriptionSource([os.path.join(
-                    get_package_share_directory('otomo_control'),'launch','controllers.launch.py'
+                    get_package_share_directory('otomo_control'), 'launch', 'controllers.launch.py'
                 )]), launch_arguments={'use_sim_time': 'true'}.items()
     )
 
@@ -63,7 +68,7 @@ def generate_launch_description():
     return LaunchDescription([
         rsp,
         joystick,
-        # twist_mux,
+        twist_mux,
         gazebo,
         spawn_entity,
         controllers
