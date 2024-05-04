@@ -20,12 +20,6 @@ def generate_launch_description():
         )]), launch_arguments={'use_sim_time': 'true', 'use_ros2_control': 'true'}.items()
     )
 
-    joystick = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([os.path.join(
-            get_package_share_directory('otomo_core'), 'launch', 'joystick.launch.py'
-        )]), launch_arguments={'use_sim_time': 'true'}.items()
-    )
-
     twist_mux = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             os.path.join(get_package_share_directory('otomo_control'), 'launch', 'twist_mux.launch.py')
@@ -74,17 +68,16 @@ def generate_launch_description():
     # It also loads the controller parameters from in there. The only thing to launch here are the
     # controllers themselves.
 
-    # controllers = IncludeLaunchDescription(
-    #     PythonLaunchDescriptionSource(
-    #         [os.path.join(
-    #             get_package_share_directory('otomo_control'), 'launch', 'controllers.launch.py'
-    #         )]),
-    #     launch_arguments={'use_sim_time': 'true'}.items()
-    # )
+    controllers = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            [os.path.join(
+                get_package_share_directory('otomo_control'), 'launch', 'controllers.launch.py'
+            )]),
+        launch_arguments={'use_sim_time': 'true'}.items()
+    )
 
     return LaunchDescription([
         rsp,
-        joystick,
         twist_mux,
         gazebo,
         spawn_entity,
