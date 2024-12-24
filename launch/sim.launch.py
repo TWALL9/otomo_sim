@@ -3,8 +3,9 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 
 from launch_ros.actions import Node
 
@@ -20,47 +21,81 @@ def generate_launch_description():
         )]), launch_arguments={'use_sim_time': 'true', 'use_ros2_control': 'true'}.items()
     )
 
-    twist_mux = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            os.path.join(get_package_share_directory('otomo_control'), 'launch', 'twist_mux.launch.py')
-        ]),
-        launch_arguments={'use_sim_time': 'true'}.items()
-    )
+    # twist_mux = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource([
+    #         os.path.join(get_package_share_directory('otomo_control'), 'launch', 'twist_mux.launch.py')
+    #     ]),
+    #     launch_arguments={'use_sim_time': 'true'}.items()
+    # )
 
     gazebo_models_path = os.path.join(pkg_share_dir, 'worlds', 'models')
     os.environ['GAZEBO_MODEL_PATH'] = gazebo_models_path
-    gazebo_world_file = os.path.join(pkg_share_dir, 'worlds', 'apartment.world')
+    default_world = os.path.join(
+        get_package_share_directory(package_name),
+        'worlds',
+        'empty.world'
+        )    
 
-    gazebo_params_file = os.path.join(pkg_share_dir, 'config', 'gazebo_params.yaml')
+    world = LaunchConfiguration('world')
 
-    # Include the Gazebo launch file, provided by the gazebo_ros package
+    world_arg = DeclareLaunchArgument(
+        'world',
+        default_value=default_world,
+        description='World to load'
+        )
+
+    # Include the Gazebo launch file, provided by the ros_gz_sim package
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([os.path.join(
-            get_package_share_directory('gazebo_ros'), 'launch', 'gazebo.launch.py'
+            get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py'
         )]),
         launch_arguments={
-            'world': gazebo_world_file,
-            'extra_gazebo_args': '--ros-args --remap /laser_controller/out:=scan --params-file ' + gazebo_params_file
+            'gz_args': ['-r -v 4', world], 'on_exit_shutdown': 'true'
+            # 'world': gazebo_world_file,
+            # 'extra_gazebo_args': '--ros-args --remap /laser_controller/out:=scan --params-file ' + gazebo_params_file
         }.items()
     )
 
-    # Run the spawner node from the gazebo_ros package. The entity name doesn't really matter if you only have a single robot.
+    # Run the spawner node from the ros_gz_sim package. The entity name doesn't really matter if you only have a single robot.
     spawn_entity = Node(
-        package='gazebo_ros',
-        executable='spawn_entity.py',
-        arguments=['-topic', 'robot_description', '-entity', 'my_bot'],
+        package='ros_gz_sim',
+        executable='create',
+        arguments=[
+            '-topic',
+            '/robot_description',
+            '-name',
+            'otomo_bot',
+            '-z', '0.1'
+        ],
         output='screen'
+    )
+
+    bridge_params = os.path.join(get_package_share_directory(package_name),'config','gazebo_params.yaml')
+    ros_gz_bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        arguments=[
+            '--ros-args',
+            '-p',
+            f'config_file:={bridge_params}',
+        ]
+    )
+
+    ros_gz_image_bridge = Node(
+        package="ros_gz_image",
+        executable="image_bridge",
+        arguments=["/camera/image_raw"]
     )
 
     joint_broad_spawner = Node(
         package='controller_manager',
-        executable='spawner.py',
+        executable='spawner',
         arguments=['joint_broad'],
     )
 
     diff_drive_spawner = Node(
         package='controller_manager',
-        executable='spawner.py',
+        executable='spawner',
         arguments=['diff_controller'],
     )
 
@@ -68,20 +103,23 @@ def generate_launch_description():
     # It also loads the controller parameters from in there. The only thing to launch here are the
     # controllers themselves.
 
-    controllers = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            [os.path.join(
-                get_package_share_directory('otomo_control'), 'launch', 'controllers.launch.py'
-            )]),
-        launch_arguments={'use_sim_time': 'true'}.items()
-    )
+    # controllers = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource(
+    #         [os.path.join(
+    #             get_package_share_directory('otomo_control'), 'launch', 'controllers.launch.py'
+    #         )]),
+    #     launch_arguments={'use_sim_time': 'true'}.items()
+    # )
 
     return LaunchDescription([
         rsp,
-        twist_mux,
+        # twist_mux,
+        world_arg,
         gazebo,
         spawn_entity,
         # controllers
         diff_drive_spawner,
-        joint_broad_spawner
+        joint_broad_spawner,
+        ros_gz_bridge,
+        ros_gz_image_bridge
     ])
