@@ -21,20 +21,27 @@ def generate_launch_description():
         )]), launch_arguments={'use_sim_time': 'true', 'use_ros2_control': 'true'}.items()
     )
 
-    # twist_mux = IncludeLaunchDescription(
-    #     PythonLaunchDescriptionSource([
-    #         os.path.join(get_package_share_directory('otomo_control'), 'launch', 'twist_mux.launch.py')
-    #     ]),
-    #     launch_arguments={'use_sim_time': 'true'}.items()
-    # )
+    twist_mux = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            os.path.join(get_package_share_directory('otomo_control'), 'launch', 'twist_mux.launch.py')
+        ]),
+        launch_arguments={'use_sim_time': 'true'}.items()
+    )
+
+    joystick = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([os.path.join(
+            get_package_share_directory('otomo_core'), 'launch', 'joystick.launch.py'
+        )]), launch_arguments={'use_sim_time': 'true'}.items()
+    )
 
     gazebo_models_path = os.path.join(pkg_share_dir, 'worlds', 'models')
     os.environ['GAZEBO_MODEL_PATH'] = gazebo_models_path
+
     default_world = os.path.join(
-        get_package_share_directory(package_name),
+        pkg_share_dir,
         'worlds',
-        'empty.world'
-        )    
+        'obstacles.sdf'
+    )
 
     world = LaunchConfiguration('world')
 
@@ -42,7 +49,7 @@ def generate_launch_description():
         'world',
         default_value=default_world,
         description='World to load'
-        )
+    )
 
     # Include the Gazebo launch file, provided by the ros_gz_sim package
     gazebo = IncludeLaunchDescription(
@@ -50,7 +57,7 @@ def generate_launch_description():
             get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py'
         )]),
         launch_arguments={
-            'gz_args': ['-r -v 4', world], 'on_exit_shutdown': 'true'
+            'gz_args': ['-r -v4 ', world], 'on_exit_shutdown': 'true'
             # 'world': gazebo_world_file,
             # 'extra_gazebo_args': '--ros-args --remap /laser_controller/out:=scan --params-file ' + gazebo_params_file
         }.items()
@@ -113,7 +120,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         rsp,
-        # twist_mux,
+        twist_mux,
         world_arg,
         gazebo,
         spawn_entity,
@@ -121,5 +128,6 @@ def generate_launch_description():
         diff_drive_spawner,
         joint_broad_spawner,
         ros_gz_bridge,
-        ros_gz_image_bridge
+        ros_gz_image_bridge,
+        joystick
     ])
